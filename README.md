@@ -124,14 +124,29 @@ LANGCHAIN_PROJECT=financial-rag-assistant
 ```
 
 ### 4. Add source documents
-
-Place annual report PDFs in `data/raw_filings/`, named exactly:
-
+ 
+The raw annual report PDFs are **not included in this repository** — they're too large to upload. Download them yourself from each company's investor relations page and place them in `data/raw_filings/`.
+ 
+**Required files, by company:**
+ 
+| Company | Ticker | Fiscal Years Needed | Where to Get It |
+|---|---|---|---|
+| Microsoft | MSFT | FY2023, FY2024 | `microsoft.com/investor/reports/ar24/download-center` (swap `ar24` → `ar23` for the earlier year). Not listed on annualreports.com. |
+| Nvidia | NVDA | FY2023, FY2024 | `annualreports.com` → search "Nvidia Corporation" → download each year's report. Also available at `investor.nvidia.com/financial-info/annual-reports-and-proxies`. |
+| Coca-Cola | KO | FY2024, FY2025 | `investors.coca-colacompany.com/filings-reports/annual-publications` |
+| Target | TGT | FY2023, FY2024 | `annualreports.com` → search "Target Corporation" → download each year's report. If unavailable there, check `investor.target.com` directly. |
+ 
+**Naming convention — rename each downloaded file exactly to:**
+ 
 ```
 EXCHANGE_TICKER_YEAR.pdf
 ```
-
-e.g. `NASDAQ_MSFT_2024.pdf`, `NYSE_TGT_2023.pdf`
+ 
+e.g. `NASDAQ_MSFT_2023.pdf`, `NASDAQ_MSFT_2024.pdf`, `NASDAQ_NVDA_2023.pdf`, `NASDAQ_NVDA_2024.pdf`, `NYSE_KO_2024.pdf`, `NYSE_KO_2025.pdf`, `NYSE_TGT_2023.pdf`, `NYSE_TGT_2024.pdf`
+ 
+This exact pattern is what `data_ingestion.ipynb` (Step 2) parses to automatically extract exchange, ticker, and year — a mismatched filename gets skipped with a warning rather than processed incorrectly.
+ 
+> **Note on Coca-Cola's different fiscal years:** this is intentional, not a typo. Coca-Cola's coverage is offset from the other three companies on purpose (see the codebase's decision notes) — the ingestion pipeline detects and warns about fiscal year mismatches automatically, so this is expected behavior when you run it.
 
 ### 5. Run ingestion
 
