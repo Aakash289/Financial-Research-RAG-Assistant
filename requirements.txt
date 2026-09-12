@@ -1,0 +1,35 @@
+# --- Orchestration ---
+langgraph>=0.2.0
+langchain>=0.3.0
+langchain-anthropic>=0.2.0
+langchain-community>=0.3.0
+
+# --- Knowledge graph ---
+langchain-experimental>=0.3.0
+langchain-neo4j>=0.1.0
+neo4j>=5.24.0
+
+# --- Retrieval: term-based + semantic ---
+rank-bm25>=0.2.2
+chromadb>=0.5.0
+
+# --- Multimodal embeddings ---
+voyageai>=0.3.0
+
+# --- Reranking ---
+cohere>=5.11.0
+
+# --- Observability and evaluation ---
+langsmith>=0.1.130
+ragas>=0.2.0
+
+# --- PDF ingestion ---
+pymupdf>=1.24.0
+pillow>=10.4.0
+
+# --- Utilities ---
+python-dotenv>=1.0.1
+pandas>=2.2.0
+
+# --- UI ---
+gradio>=4.44.0

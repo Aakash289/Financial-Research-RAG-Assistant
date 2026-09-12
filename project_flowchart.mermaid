@@ -1,0 +1,48 @@
+flowchart TD
+    subgraph ING["Ingestion Pipeline - data_ingestion.ipynb"]
+        A1[Download PDF Annual Reports<br/>Microsoft, Nvidia, Coca-Cola, Target x 2 years] --> A2[PyMuPDF Extraction<br/>text blocks and images]
+        A2 --> A3[Claude Haiku Vision Classification<br/>label each image: chart, table, photo, logo, decorative]
+        A3 --> A3b[Keep chart, table, relevant photo<br/>Discard logo, decorative]
+        A2 --> A3c[Compute Text-Density per Page]
+        A3c -->|low density or metric-keyword-without-percent| A3d[Rasterize Page via pdftoppm 200 DPI<br/>unique filename per page]
+        A3d --> A3e[Claude Haiku Vision<br/>reads figures missed by text and raster extraction]
+        A3e --> A4c[Figure Summary Text<br/>e.g. LinkedIn revenue growth: 10% YoY]
+        A2 --> A4a[Stage 1: Section-Aware Split<br/>shape-based heading detection]
+        A4a --> A4b[Stage 2: RecursiveCharacterTextSplitter<br/>500 chars, 100 char overlap, per section]
+        A4b --> A4[Chunks with metadata<br/>company, year, section, chunk_id]
+        A4c --> A4
+        A4 --> A5[Build BM25 Index]
+        A4 --> A6[Embed Text via Voyage multimodal_embed<br/>batched + rate-limit paced]
+        A3b --> A7[Embed Kept Images via Voyage<br/>resized to under 10MB first]
+        A6 --> A8[(ChromaDB<br/>Text Collection, batched .add)]
+        A7 --> A8
+    end
+
+    subgraph QRY["Query Pipeline - retrieval_pipeline.ipynb / app.py"]
+        B1([User Query via Gradio]) --> B2[LangGraph StateGraph]
+        B2 --> B5[Hybrid Retrieval Node<br/>BM25 + Chroma semantic]
+        B5 --> B6[Manual RRF Fusion<br/>combines BM25 + semantic ranked lists by rank position]
+        B6 --> B9[Cohere Rerank<br/>cross-encoder scores raw text]
+        B9 --> B10[Top-K Chunks Selected]
+        B10 --> B11[Claude Sonnet Generate<br/>prompt caching + minimized metadata]
+        B11 --> B13[Live RAGAS Scoring<br/>faithfulness + answer relevancy, single_turn_ascore, no ground truth needed]
+        B13 --> B12([Answer + Faithfulness/Relevancy Scores + Sources + Tokens])
+    end
+
+    A5 -.indexed data.-> B5
+    A8 -.indexed data.-> B5
+
+    B12 --> C1[Gradio UI<br/>Answer + Live Score Badges / Sources / Pipeline Trace / Token-Cost-Latency KPI Cards / System Prompt]
+
+    B2 -.traced.-> D1[(LangSmith<br/>tracing + token/cost tracking + per-step and end-to-end latency)]
+    B13 -.appended to.-> D2[(data/live_query_log.jsonl<br/>every query's faithfulness, relevancy, tokens, latency)]
+    D1 -.session metrics loaded into.-> C2[Gradio Analytics Tab<br/>LangSmith KPI cards: total queries, total tokens, avg cost, avg latency<br/>+ Live RAGAS rolling averages: Faithfulness, Answer Relevancy]
+    D2 -.rolling averages loaded into.-> C2
+
+    %% NOTE: Knowledge graph (Neo4j + LLMGraphTransformer) and the query router
+    %% were removed from this project after estimating full-corpus KG extraction
+    %% would cost ~$100 and take 18-28 hours. Retrieval is hybrid-only.
+    %% NOTE: context precision and context recall (RAGAS's other two metrics) were
+    %% dropped entirely -- both require ground truth and cannot be computed live
+    %% on an arbitrary user query. Only faithfulness and answer relevancy are kept,
+    %% and both now run live per query instead of in an offline batch step.
